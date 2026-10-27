@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grabador de voz</title>
+<style>
+/* Marca Capitán Tokn: grafito, una sola cosa en coral por pantalla (el botón de grabar). */
+:root{--grafito:#161b26;--carpeta:#1c2230;--linea:#273042;--linea-f:#626e89;--tiza:#edf1f7;--niebla:#909aae;--coral:#ff5c8a;--cielo:#7fa6ff;
+--sans:"TeX Gyre Heros",Helvetica,Arial,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--grafito);color:var(--tiza);font-family:var(--sans);margin:0;padding:32px max(16px,env(safe-area-inset-left)) 120px}
+.pagina{max-width:860px;margin:0 auto;display:grid;gap:28px}
+h1{font-size:clamp(26px,4vw,36px);margin:0}
+p{margin:0;color:var(--niebla);max-width:64ch;line-height:1.5}
+.bloques{display:grid;gap:18px;background:var(--carpeta);border:1px solid var(--linea);border-radius:6px;padding:24px}
+.bloque{display:grid;gap:6px;padding-left:14px;border-left:3px solid var(--linea)}
+.bloque.activo{border-left-color:var(--cielo)}
+.tono{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--cielo)}
+.frase{font-size:22px;line-height:1.55}
+.barra{position:sticky;bottom:0;background:var(--grafito);border-top:1px solid var(--linea);padding:16px 0;display:grid;gap:12px}
+.controles{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-size:17px;padding:12px 22px;border-radius:999px;border:1px solid var(--tiza);background:transparent;color:var(--tiza);cursor:pointer}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible{outline:2px solid var(--cielo);outline-offset:2px}
+#grabar{background:var(--coral);border-color:var(--coral);color:var(--grafito);font-weight:700;min-width:180px}
+#grabar.on{background:transparent;color:var(--coral)}
+.reloj{font-size:22px;font-variant-numeric:tabular-nums;min-width:70px}
+.nivel{height:10px;background:var(--linea);border-radius:5px;overflow:hidden;flex:1;min-width:160px}
+.nivel i{display:block;height:100%;width:0;background:var(--cielo);transition:width .05s}
+.nivel.alto i{background:var(--coral)}
+#estado{font-size:15px}
+audio{width:100%}
+.tomas{color:var(--niebla);font-size:14px;margin:0;padding-left:1.2em}
+</style></head><body>
+<div class="pagina">
+  <header style="display:grid;gap:10px">
+    <h1>Graba tu voz para clonarla</h1>
+    <p>Lee los 7 bloques seguidos, tal cual, con el tono que pide cada uno (~70 s). Habitación sin eco, micro a un palmo, sin música ni ventilador.
+       Si te equivocas, para, dale a «Repetir» y empieza de nuevo. Al guardar, la toma va directa al Drive.</p>
+    <p id="aviso"></p>
+  </header>
+  <div class="bloques" id="bloques"></div>
+  <ul class="tomas" id="tomas"></ul>
+  <div class="barra">
+    <div class="controles">
+      <button id="grabar" type="button">● Grabar</button>
+      <span class="reloj" id="reloj">0:00</span>
+      <div class="nivel" id="nivel" title="Nivel del micro: que se mueva en azul, sin llegar al rojo"><i></i></div>
+    </div>
+    <audio id="escucha" controls hidden></audio>
+    <div class="controles">
+      <button id="guardar" type="button" disabled>Guardar en el Drive</button>
+      <button id="repetir" type="button" disabled>Repetir</button>
+      <span id="estado"></span>
+    </div>
+  </div>
+</div>
+<script>
+const TEXTO = [
+  ["Cercano, como al empezar un vídeo", "Hola, bienvenido a mi canal. Hoy vamos a comprobar algo que parece imposible: que mi propio ordenador hable exactamente como yo."],
+  ["Narrando, tranquilo", "El zorro cenaba cerezas junto a la chimenea, mientras la lluvia caía sobre el tejado. Jorge recogió seis jarras de agua fría y las llevó al cerro, a pocos kilómetros de la ciudad. Mañana, a las once y cuarto, el perro de Rosa correrá por la carretera."],
+  ["Explicando algo técnico", "Abro ComfyUI, cargo el modelo en la gráfica de doce gigas y le pido a ChatGPT un prompt detallado. En cinco minutos, el clip está listo."],
+  ["Preguntando de verdad", "¿Y de verdad merece la pena? ¿Cuánto cuesta en luz? Pues menos de un céntimo por clip."],
+  ["Entusiasmado", "¡Ha salido a la primera! No me lo puedo creer."],
+  ["Serio, despacio", "Pero ojo: si no está medido, no se dice. Así que vamos a medirlo todo, paso a paso, sin trampas."],
+  ["Enumerando", "Uno, dos, tres, cuatro y cinco. Primero la imagen, después el prompt y, por último, la animación."],
+];
+const $ = id => document.getElementById(id);
+$("bloques").innerHTML = TEXTO.map(([t, f], i) => `<div class="bloque"><div class="tono">${i + 1} · ${t}</div><div class="frase">${f}</div></div>`).join("");
+
+let rec = null, trozos = [], blob = null, t0 = 0, reloj = null, ctx = null, analizador = null, flujo = null;
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+async function micro() {
+  if (flujo) return flujo;
+  // sin cancelación de eco, supresión de ruido ni control de ganancia: el clon tiene que oír tu voz tal cual
+  flujo = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+    channelCount: 1, sampleRate: 48000}});
+  ctx = new AudioContext();
+  analizador = ctx.createAnalyser(); analizador.fftSize = 1024;
+  ctx.createMediaStreamSource(flujo).connect(analizador);
+  const datos = new Float32Array(analizador.fftSize);
+  (function medir() {
+    analizador.getFloatTimeDomainData(datos);
+    let pico = 0; for (const v of datos) pico = Math.max(pico, Math.abs(v));
+    $("nivel").firstChild.style.width = Math.min(100, pico * 110) + "%";
+    $("nivel").classList.toggle("alto", pico > 0.9);
+    requestAnimationFrame(medir);
+  })();
+  return flujo;
+}
+
+$("grabar").addEventListener("click", async () => {
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  try { await micro(); } catch (e) { $("estado").textContent = "Chrome no da permiso al micro: pulsa el candado de la barra de direcciones y permítelo."; return; }
+  trozos = []; blob = null;
+  rec = new MediaRecorder(flujo, {mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 256000});
+  rec.ondataavailable = e => e.data.size && trozos.push(e.data);
+  rec.onstop = () => {
+    clearInterval(reloj);
+    blob = new Blob(trozos, {type: "audio/webm"});
+    $("escucha").src = URL.createObjectURL(blob); $("escucha").hidden = false;
+    $("grabar").textContent = "● Grabar"; $("grabar").classList.remove("on");
+    $("guardar").disabled = false; $("repetir").disabled = false;
+    $("estado").textContent = "Escúchala. Si está bien, guárdala.";
+  };
+  rec.start(500);
+  t0 = performance.now();
+  reloj = setInterval(() => $("reloj").textContent = fmt((performance.now() - t0) / 1000), 250);
+  $("grabar").textContent = "■ Parar"; $("grabar").classList.add("on");
+  $("guardar").disabled = true; $("repetir").disabled = true; $("escucha").hidden = true;
+  $("estado").textContent = "Grabando… lee los 7 bloques seguidos.";
+});
+$("repetir").addEventListener("click", () => {
+  blob = null; $("escucha").hidden = true; $("guardar").disabled = true; $("repetir").disabled = true;
+  $("reloj").textContent = "0:00"; $("estado").textContent = "Cuando quieras, dale a Grabar.";
+});
+$("guardar").addEventListener("click", async () => {
+  if (!blob) return;
+  $("guardar").disabled = true; $("estado").textContent = "Guardando…";
+  try {
+    const r = await fetch("/guardar", {method: "POST", body: blob});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    $("estado").textContent = `Guardada en el Drive: ${j.archivo} (${j.segundos} s). Ya puedes cerrar o grabar otra toma.`;
+    cargarTomas();
+  } catch (e) { $("estado").textContent = "No se pudo guardar: " + e.message; $("guardar").disabled = false; }
+});
+async function cargarTomas() {
+  try { const j = await (await fetch("/tomas")).json();
+    $("tomas").innerHTML = j.tomas.map(t => `<li>✓ ${t}</li>`).join(""); } catch (_) {}
+}
+if (!window.isSecureContext) $("aviso").textContent = "Abre esta página como http://localhost:8765 para que el navegador deje usar el micro.";
+cargarTomas();
+</script>
+</body></html>

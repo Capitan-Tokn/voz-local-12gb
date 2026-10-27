@@ -1,0 +1,4 @@
+## 01_entrada
+[curious] ¿Cuánto pagas cada mes por una voz que ni siquiera es tuya? [matter-of-fact] Yo lo he medido, y la respuesta te va a cambiar la forma de hacer vídeos.
+## 02_explicacion
+[serious] Los primeros resultados fueron un desastre: [short pause] acento raro, frases planas y cero emoción. [excited] ¡Pero encontré el problema! No era el modelo, era la grabación de ejemplo. [warmly] Te lo enseño paso a paso.

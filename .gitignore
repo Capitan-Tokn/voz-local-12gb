@@ -1,0 +1,6 @@
+# tu voz no se sube: solo el texto que lees
+referencia/*.wav
+referencia/*.webm
+salida/
+__pycache__/
+.venv/
