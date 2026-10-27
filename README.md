@@ -79,6 +79,7 @@ Y uno que casi nadie cuenta: al final de las frases largas, Qwen3 a veces baja e
 | [`nivelado.py`](nivelado.py) | Sube solo las caídas de volumen entre frases |
 | [`revisar_voz.py`](revisar_voz.py) | Whisper comprueba cada bloque y marca los que no dicen lo que pone |
 | [`grabador/`](grabador) | Grabador en el navegador: `python grabador/servidor.py` y abre http://localhost:8765 |
+| [`pruebas/`](pruebas) | Los audios del vídeo con sus notas: antes y después, Higgs, Chatterbox y el nivelado. Escúchalos tú |
 | [`TEXTO_PARA_GRABAR.md`](TEXTO_PARA_GRABAR.md) | El texto para tu grabación, y cómo grabarlo |
 | [`referencia/`](referencia) | Aquí va `mi_voz.wav` (no se sube a git) junto a `mi_voz.txt`, lo que dices palabra por palabra |
 
