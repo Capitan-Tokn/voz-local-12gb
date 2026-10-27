@@ -34,7 +34,7 @@ audio{width:100%}
   <header style="display:grid;gap:10px">
     <h1>Graba tu voz para clonarla</h1>
     <p>Lee los 7 bloques seguidos, tal cual, con el tono que pide cada uno (~70 s). Habitación sin eco, micro a un palmo, sin música ni ventilador.
-       Si te equivocas, para, dale a «Repetir» y empieza de nuevo. Al guardar, la toma va directa al Drive.</p>
+       Si te equivocas, para, dale a «Repetir» y empieza de nuevo. Al guardar, la toma va directa a la carpeta <code>referencia/</code>.</p>
     <p id="aviso"></p>
   </header>
   <div class="bloques" id="bloques"></div>
@@ -47,7 +47,7 @@ audio{width:100%}
     </div>
     <audio id="escucha" controls hidden></audio>
     <div class="controles">
-      <button id="guardar" type="button" disabled>Guardar en el Drive</button>
+      <button id="guardar" type="button" disabled>Guardar toma</button>
       <button id="repetir" type="button" disabled>Repetir</button>
       <span id="estado"></span>
     </div>
@@ -120,7 +120,7 @@ $("guardar").addEventListener("click", async () => {
     const r = await fetch("/guardar", {method: "POST", body: blob});
     const j = await r.json();
     if (!r.ok) throw new Error(j.error);
-    $("estado").textContent = `Guardada en el Drive: ${j.archivo} (${j.segundos} s). Ya puedes cerrar o grabar otra toma.`;
+    $("estado").textContent = `Guardada en referencia/: ${j.archivo} (${j.segundos} s). Ya puedes cerrar o grabar otra toma.`;
     cargarTomas();
   } catch (e) { $("estado").textContent = "No se pudo guardar: " + e.message; $("guardar").disabled = false; }
 });
