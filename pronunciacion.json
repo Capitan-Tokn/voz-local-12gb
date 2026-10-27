@@ -1,7 +1,15 @@
 {
-  "_nota": "Palabra del guion -> cómo se le escribe al modelo para que la diga bien. Se aplica antes de generar; el guion (y tus subtítulos) no se tocan. Añade aquí las tuyas.",
+  "_nota": "Palabra del guion -> cómo se le escribe al modelo para que la diga bien. Se aplica antes de generar; el guion (y tus subtítulos) no se tocan. Añade aquí las tuyas. Regla: palabras en inglés, escritas como se dicen en español.",
   "Qwen3-TTS": "Cuen tres te te ese",
   "Qwen3": "Cuen tres",
   "4070": "cuarenta setenta",
-  "ComfyUI": "Comfi iu ai"
+  "ComfyUI": "comfi iu ai",
+  "GitHub": "guit jab",
+  "ElevenLabs": "iléven labs",
+  "Whisper": "güísper",
+  "Higgs Audio": "jigs áudio",
+  "Chatterbox": "cháterbox",
+  "Python": "páizon",
+  "Windows": "güíndous",
+  "ChatGPT": "chat yi pi ti"
 }

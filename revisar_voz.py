@@ -54,13 +54,14 @@ pron = {k: v for k, v in json.loads((AQUI / "pronunciacion.json").read_text(enco
 modelo = WhisperModel("large-v3", device="cuda", compute_type="float16")
 malos = 0
 for nombre, datos in informe.items():
-    texto = datos["texto"]
+    texto = fonetico = datos["texto"]
     for mal, bien in pron.items():
         if not mal.isdigit():   # las cifras ya las iguala cifras_a_letra (Whisper escribe «4070», no «cuarenta setenta»)
-            texto = re.sub(rf"\b{re.escape(mal)}\b", bien, texto)
+            fonetico = re.sub(rf"\b{re.escape(mal)}\b", bien, fonetico)
     segs, _ = modelo.transcribe(str(carpeta / f"{nombre}.wav"), language="es", beam_size=5)
     oido = " ".join(s.text for s in segs).strip()
-    parecido = difflib.SequenceMatcher(None, norm(oido), norm(texto), autojunk=False).ratio()
+    # contra el guion y contra su versión fonética: si dice bien «GitHub», Whisper escribe «GitHub», no «guit jab»
+    parecido = max(difflib.SequenceMatcher(None, norm(oido), norm(t), autojunk=False).ratio() for t in (texto, fonetico))
     datos.update({"oido": oido, "parecido": round(parecido, 3)})
     ok = parecido >= UMBRAL
     malos += not ok
